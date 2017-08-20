@@ -26,17 +26,17 @@ class MDP:
     def ejecuciondeAccion(self):
         aleatorio = self.rand()
         acum = 0.0
-        ind = 0
-        
+        #ind = 0
+        #print("Probabilidad: ", len(self.probabilidad), "\n Recompensa: ", len(self.recompensa))
         if len(self.probabilidad) == 1:
+            #print("Solo hay 1! :o")
             return self.estadoPrima[0],self.recompensa[0]
         else:
-            for i in self.probabilidad:#Para recorrer todo el vector 
-                acum = acum + i
+            for i in range(len(self.probabilidad)):#Para recorrer todo el vector 
+                acum = acum + self.probabilidad[i]
                 if aleatorio<=acum:
-                    return self.estadoPrima[ind],self.recompensa[ind]
-                else:
-                    ind+=1
+                    #print (i)
+                    return self.estadoPrima[i], self.recompensa[i]
 
 
 
@@ -75,7 +75,7 @@ matriz[0][6].inicializar([3,4],[0.7,0.3],[-5,-10])
 
 #1 Glucosa baja
 matriz[1][0].inicializar([0,1],[0.2,0.8],[-1,-0.04])
-matriz[1][1].inicializar([1,2],[0.7,0,3],[-0.04,1])
+matriz[1][1].inicializar([1,2],[0.7,0.3],[-0.04,1])
 matriz[1][2].inicializar([1,2],[0.2,0.8],[-0.04,2])
 matriz[1][3].inicializar([3],[1],[-1])
 matriz[1][4].inicializar([1,2,3],[0.1,0.3,0.6],[-0.04,2,-1])
@@ -96,12 +96,12 @@ matriz[3][0].inicializar([2,3],[0.2,0.8],[10,-1])#cuidado porque es la unica que
 matriz[3][1].inicializar([3,4],[0.8,0.3],[-1,-10])
 matriz[3][2].inicializar([3,4],[0.6,0.4],[-1,-10])
 matriz[3][3].inicializar([4],[1],[-50])
-matriz[3][4].inicializar([3,4],[0.2,0.8],[-10])
+matriz[3][4].inicializar([3,4],[0.2,0.8],[-10,-100])
 matriz[3][5].inicializar([4],[1],[-50])
 matriz[3][6].inicializar([4],[1],[-100])
 
 
-#4 Hyperglucemia
+#4 Hiperglucemia
 matriz[4][0].inicializar([3,4],[0.2,0.8],[10,-1])
 matriz[4][1].inicializar([4],[1],[-100])
 matriz[4][2].inicializar([4],[1],[-100])
@@ -114,7 +114,47 @@ matriz[4][6].inicializar([4],[1],[-100])
 
 #################FUNCIONES#################%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+def actualizarQ(state, next_state, action, alpha, gamma, reward):
+    rsa = reward
+    qsa = reward
+    new_q = qsa + alpha * (rsa + gamma * max(q[next_state, :]) - qsa)
+    q[state, action] = new_q
+    # renormalize row to be between 0 and 1
+    rn = q[state][q[state] > 0] / np.sum(q[state][q[state] > 0])
+    q[state][q[state] > 0] = rn
+    
+def printMatrix(a):
+   print("Matriz Q[",("%d" %a.shape[0]),"][",("%d" %a.shape[1]),"]")
+   rows = a.shape[0]
+   cols = a.shape[1]
+   for i in range(0,rows):
+      for j in range(0,cols):
+         print ("%.8f"%a[i,j], end="\t")
+      print (" ")
+   print 
 
+def imprimirPolitica(q):
+    print("------POLITICA------")
+    ban = True
+    may = 0
+    estados = ["Hippoglucemia", "Glucosa baja", "Glucosa normal","Glucosa alta","Hiperglucemia"]
+    acciones = ["No comer","Comer sano (Poco)","Comer sano","Comer sano (Mucho)","Comer mal (Poco)"]
+    indMay = 0
+    #5 "Comer mal"
+    #6 "Comer mal (Mucho)"]
+    for i in range(len(q)):
+        if ban:
+            ban = False
+            may=q[i][0]
+            indMay=0
+        for j in range(len(q[i])):
+            if may < q[i][j]:
+                may = q[i][j]
+                indMay=j
+        print("%s \t=>%s" % (estados[i],acciones[indMay]))
+            
+        
+        
     
 ###########################################%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -141,12 +181,32 @@ for e in range(int(n_episodes)):
     #Mientras no se encuentre el objetivo sigue recorriendo la matriz
     goal = False
     while not goal:
+        #Se sacan las acciones para la lista
+        actions = list(range(n_actions))
+        #Se barajean las acciones
+        random_state.shuffle(actions)
+        #Sacamos la accion
+        current_action = actions[0]
+        
+        #Ejecutamos la accion
+        #print("Matriz[",current_state,"][",current_action,"]")
+        #print("Matriz[%d][%d]" % (current_state,current_action))
+        sPrima, reward = matriz[current_state][current_action].ejecuciondeAccion()
+        
+        #Se actualiza Q
+        actualizarQ(current_state, sPrima, current_action,alpha, gamma, reward)
+        
+        #Se cambia de estado
+        current_state = sPrima
+        
+    
         
         
-        if(current_state==2):
+        if(reward>=0):
             goal = True
 
 
-
+printMatrix(q)
+imprimirPolitica(q)
 
         
